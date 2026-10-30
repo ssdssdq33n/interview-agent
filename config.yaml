@@ -1,0 +1,142 @@
+# ============================================================
+#  INTERVIEW AGENT — Cấu hình trung tâm
+#  Sửa file này để đổi model, cổng, hành vi. Không cần sửa code.
+# ============================================================
+
+agent:
+  name: "Alex"               # tên interviewer 3D
+  language: "vi"             # ngôn ngữ mặc định: "vi" | "en" | "auto"
+  provider: "ollama"         # não mặc định: "ollama" (ở nhà) | "claude" (khi có API)
+  strip_thinking: true       # bỏ <think>...</think> của Qwen3 (gọn hơn cho voice)
+
+# ────────────────────────────────────────────────────────────
+# NÃO OLLAMA (local, riêng tư, chạy offline)
+# ────────────────────────────────────────────────────────────
+ollama:
+  host: "http://localhost:11434"
+  brain_model: "qwen3:14b"       # LLM chính — tool calling + Vietnamese tốt nhất (10.7GB VRAM)
+  # brain_model: "qwen3:8b"      # Fallback nếu VRAM tight (6GB)
+  embed_model: "bge-m3"          # RAG embedding — đã test VN-MTEB, cross-lingual VI↔EN tốt nhất
+  stt_model: "large-v3-turbo"    # Whisper model cho speech-to-text
+  num_ctx: 8192                  # context window (giảm xuống 4096 nếu thiếu VRAM)
+  temperature: 0.7
+  think: false                   # tắt thinking mode Qwen3 → nhanh hơn (bật nếu muốn suy luận sâu)
+  keep_alive: "30m"              # giữ model trong VRAM → không nạp lại giữa buổi
+  models:
+    light: "qwen3:8b"            # cho tác vụ nhanh (summary, review)
+    default: "qwen3:14b"         # não chính
+    heavy: "qwen3:14b"           # task nặng (system design eval)
+
+# ────────────────────────────────────────────────────────────
+# NÃO CLAUDE (qua claude -p, thông minh hơn)
+# ────────────────────────────────────────────────────────────
+claude:
+  cli: "claude"
+  model: "sonnet"              # haiku (nhanh) | sonnet (cân bằng) | opus (thông minh nhất)
+  effort: "medium"
+  use_subscription: true
+  persistent: false
+  permission_mode: "bypassPermissions"
+  allowed_tools: []
+  disallowed_tools: []
+  confirm_native_tools: false
+  idle_timeout: 180
+  stream_timeout: 900
+
+# ────────────────────────────────────────────────────────────
+# INTERVIEW ENGINE
+# ────────────────────────────────────────────────────────────
+interview:
+  default_level: "mid"           # junior | mid | senior | lead
+  default_lang: "vi"             # vi | en | mixed
+  focus_areas:                   # chủ đề ưu tiên khi sinh câu hỏi
+    - "java-core"
+    - "spring-boot"
+    - "microservices"
+    - "devops"
+    - "system-design"
+    - "behavioral"
+  timer_per_question: 120        # giây mỗi câu (0 = không giới hạn)
+  follow_up_depth: 2             # số câu follow-up tối đa mỗi câu chính
+  phases:                        # các giai đoạn phỏng vấn và thời gian (phút)
+    - name: "introduction"
+      duration: 3
+    - name: "background"
+      duration: 5
+    - name: "technical"
+      duration: 20
+    - name: "system_design"
+      duration: 10
+      optional: true
+    - name: "behavioral"
+      duration: 5
+    - name: "qa"
+      duration: 3
+
+# ────────────────────────────────────────────────────────────
+# PERSONA
+# ────────────────────────────────────────────────────────────
+persona:
+  interviewer:
+    company: "Tech Corp"          # tên công ty đóng vai
+    position: "Senior Tech Lead"  # vai của interviewer
+    style: "professional"         # professional | friendly | strict
+  trainer:
+    style: "encouraging"          # phong cách khi train
+
+# ────────────────────────────────────────────────────────────
+# RAG — Knowledge Base
+# ────────────────────────────────────────────────────────────
+rag:
+  enabled: true
+  chunk_size: 500                # ký tự mỗi chunk
+  chunk_overlap: 50
+  top_k: 5                       # số chunk truy hồi mỗi query
+
+# ────────────────────────────────────────────────────────────
+# GIỌNG NÓI
+# ────────────────────────────────────────────────────────────
+tts:
+  engine: "edge"                 # edge (online, chất lượng cao) | browser (offline, dùng OS voice)
+  vi_voice: "vi-VN-NamMinhNeural"
+  en_voice: "en-US-GuyNeural"
+  rate: "+5%"
+  pitch: "-4Hz"                  # trầm hơn một chút cho interviewer nam
+
+stt:
+  engine: "browser"              # browser (Web Speech API) | whisper (local, chính xác hơn)
+  whisper_model: "large-v3-turbo"
+  whisper_device: "auto"         # auto | cuda | cpu
+  language: "vi"                 # ngôn ngữ chính (whisper vẫn hiểu code-switching)
+
+# ────────────────────────────────────────────────────────────
+# LƯU TRỮ
+# ────────────────────────────────────────────────────────────
+storage:
+  db_path: "data/sessions/interview.db"
+
+postgres:
+  enabled: true
+  dsn: "postgresql://interview:interview@localhost:5433/interview"
+  dim: 768                       # bge-m3 = 768 chiều
+
+memory:
+  vault_dir: "data/memory"
+  max_journal_priming: 8
+  history_turns: 30
+  auto_extract: false            # tắt ở Phase 1, bật sau khi có RAG
+
+# ────────────────────────────────────────────────────────────
+# SERVER
+# ────────────────────────────────────────────────────────────
+server:
+  host: "127.0.0.1"
+  port: 8080
+
+# Dữ liệu người dùng (điền để agent hiểu bạn)
+user:
+  cv_path: "data/cv"             # thư mục chứa CV PDF
+  name: ""                       # tên của bạn (điền để agent gọi đúng)
+  current_level: "mid"           # level hiện tại của bạn
+  target_level: "senior"         # level muốn đạt được
+  target_companies: []           # công ty mục tiêu (vd: ["VNG", "Shopee", "Grab"])

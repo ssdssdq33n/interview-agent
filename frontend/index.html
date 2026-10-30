@@ -1,0 +1,352 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Interview Agent — Alex</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="style.css?v=7" />
+</head>
+<body>
+
+<!-- ── HEADER ──────────────────────────────────────────────────── -->
+<header class="header">
+  <div class="header-left">
+    <div class="logo">
+      <div class="logo-icon">AI</div>
+      <span class="logo-text">Interview Agent</span>
+    </div>
+    <div id="status-badge" class="status-badge status-connecting">
+      <span class="status-dot"></span>
+      <span id="status-text">Đang kết nối...</span>
+    </div>
+  </div>
+
+  <div class="header-center">
+    <div class="toggle-group" id="mode-toggle">
+      <button class="toggle-btn active" data-mode="interviewer" title="Phỏng vấn thật — interviewer không biết bạn">
+        🎯 Interview
+      </button>
+      <button class="toggle-btn" data-mode="trainer" title="Gia sư — biết bạn và hỗ trợ">
+        📚 Training
+      </button>
+    </div>
+  </div>
+
+  <div class="header-right">
+    <div class="provider-group" id="provider-toggle">
+      <button class="provider-btn active" data-provider="ollama">
+        <span class="provider-dot" id="ollama-dot"></span> Ollama
+      </button>
+      <button class="provider-btn" data-provider="claude">
+        <span class="provider-dot" id="claude-dot"></span> Claude
+      </button>
+    </div>
+
+    <div class="lang-group" id="lang-toggle">
+      <button class="lang-btn active" data-lang="vi">🇻🇳 VI</button>
+      <button class="lang-btn" data-lang="en">🇺🇸 EN</button>
+    </div>
+
+    <button class="icon-btn" id="btn-code" title="Bài tập coding" style="font-size:18px">💻</button>
+    <a href="/dashboard.html" class="icon-btn" title="Dashboard">📊</a>
+    <button class="icon-btn" id="btn-settings" title="Cài đặt">⚙</button>
+    <button class="icon-btn" id="btn-history" title="Lịch sử phiên">📋</button>
+  </div>
+</header>
+
+<!-- ── MAIN LAYOUT ──────────────────────────────────────────────── -->
+<main class="main-layout">
+
+  <!-- LEFT: Avatar panel -->
+  <section class="avatar-panel" id="avatar-panel">
+    <!-- Three.js renders into avatar-scene-3d -->
+    <div class="avatar-scene" id="avatar-scene-3d" style="position:relative;flex:1">
+      <!-- CSS placeholder — hidden after Three.js loads -->
+      <div class="avatar-placeholder" id="avatar-placeholder">
+        <div class="avatar-bust">
+          <div class="avatar-head" id="avatar-head">
+            <div class="avatar-face">
+              <div class="avatar-eyes">
+                <div class="avatar-eye left"></div>
+                <div class="avatar-eye right"></div>
+              </div>
+              <div class="avatar-mouth" id="avatar-mouth"></div>
+            </div>
+          </div>
+          <div class="avatar-body"></div>
+        </div>
+        <div style="text-align:center">
+          <div class="avatar-name">Alex</div>
+          <div class="avatar-title">Senior Tech Lead · Tech Corp</div>
+        </div>
+      </div>
+
+      <!-- State indicator overlay -->
+      <div class="avatar-state" id="avatar-state">
+        <div class="state-indicator" id="state-indicator">
+          <div class="state-dots">
+            <span></span><span></span><span></span>
+          </div>
+          <span id="state-label">Sẵn sàng</span>
+        </div>
+      </div>
+
+      <!-- Waveform (hiện khi speaking) -->
+      <div class="waveform" id="waveform">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+
+      <!-- Timer (hiện khi in-session) -->
+      <div class="question-timer hidden" id="question-timer">
+        <span class="timer-icon">⏱</span>
+        <span id="timer-label">2:00</span>
+      </div>
+    </div>
+
+    <!-- Alex info bar -->
+    <div class="avatar-info-bar">
+      <div class="avatar-name">Alex</div>
+      <div class="avatar-title" id="avatar-subtitle">Senior Tech Lead · Tech Corp</div>
+    </div>
+
+    <!-- Phase indicator -->
+    <div class="phase-bar" id="phase-bar">
+      <div class="phase-step active" data-phase="introduction">Giới thiệu</div>
+      <div class="phase-step" data-phase="background">Nền tảng</div>
+      <div class="phase-step" data-phase="technical">Kỹ thuật</div>
+      <div class="phase-step" data-phase="system_design">System Design</div>
+      <div class="phase-step" data-phase="behavioral">Hành vi</div>
+      <div class="phase-step" data-phase="qa">Q&amp;A</div>
+    </div>
+  </section>
+
+  <!-- RIGHT: Conversation + Code panel -->
+  <section class="conversation-panel">
+
+    <!-- Code challenge panel (hidden by default) -->
+    <div class="code-panel hidden" id="code-panel">
+      <div class="code-panel-header">
+        <span id="code-title" class="code-challenge-title">Bài tập</span>
+        <button class="icon-btn" id="btn-close-code" title="Đóng">✕</button>
+      </div>
+      <div id="code-description" class="code-description"></div>
+      <div id="monaco-container" style="height:260px;border:1px solid var(--border);border-radius:var(--radius-sm);overflow:hidden"></div>
+      <div class="code-actions">
+        <select id="code-lang" class="setting-select" style="width:100px">
+          <option value="java">Java</option>
+          <option value="python">Python</option>
+        </select>
+        <button class="btn-primary" id="btn-run-code">▶ Chạy</button>
+        <button class="btn-secondary" id="btn-submit-code">✓ Nộp</button>
+      </div>
+      <div class="code-output hidden" id="code-output"></div>
+    </div>
+
+    <!-- Messages area -->
+    <div class="messages-area" id="messages-area">
+      <div class="welcome-card" id="welcome-card">
+        <div class="welcome-icon">👋</div>
+        <h2>Chào mừng!</h2>
+        <p>Chọn chế độ và nhấn <strong>Bắt đầu</strong> để khởi động phiên, hoặc gõ thẳng câu hỏi bên dưới.</p>
+        <div class="welcome-actions">
+          <button class="btn-primary" id="btn-start-interview">🎯 Bắt đầu phỏng vấn</button>
+          <button class="btn-secondary" id="btn-start-training">📚 Luyện tập có hướng dẫn</button>
+        </div>
+        <div style="margin-top:16px;font-size:12px;color:var(--text-3)">
+          💡 Nhấn <kbd>Space</kbd> để nói · <kbd>Enter</kbd> để gửi ·
+          <a href="/dashboard.html">📊 Dashboard</a>
+        </div>
+      </div>
+    </div>
+
+    <!-- Tool call indicator -->
+    <div class="tool-indicator hidden" id="tool-indicator">
+      <span class="tool-icon">⚙</span>
+      <span id="tool-label">Đang xử lý...</span>
+    </div>
+
+    <!-- Score feedback card (appended dynamically) -->
+
+    <!-- Input area -->
+    <div class="input-area">
+      <div class="input-wrapper">
+        <textarea
+          id="msg-input"
+          class="msg-input"
+          placeholder="Nhập câu trả lời hoặc câu hỏi... (Enter để gửi, Shift+Enter xuống dòng)"
+          rows="1"
+        ></textarea>
+        <div class="input-actions">
+          <button class="icon-btn mic-btn" id="btn-mic" title="Nói (Space)">🎙</button>
+          <button class="btn-send" id="btn-send" title="Gửi (Enter)">
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+              <line x1="22" y1="2" x2="11" y2="13"></line>
+              <polygon points="22 2 15 22 11 13 2 9 22 2"></polygon>
+            </svg>
+          </button>
+        </div>
+      </div>
+      <div class="input-hint" id="input-hint">
+        <span id="hint-mode">Chế độ: Interview</span> ·
+        <span id="hint-provider">Ollama</span> ·
+        <span id="hint-lang">VI</span> ·
+        <span id="hint-rag">RAG: 0 chunks</span>
+      </div>
+    </div>
+  </section>
+</main>
+
+<!-- ── SETTINGS PANEL ─────────────────────────────────────────── -->
+<div class="panel-overlay hidden" id="settings-overlay"></div>
+<div class="side-panel hidden" id="settings-panel">
+  <div class="panel-header">
+    <h3>Cài đặt</h3>
+    <button class="icon-btn" id="btn-close-settings">✕</button>
+  </div>
+  <div class="panel-body">
+    <div class="setting-group">
+      <label class="setting-label">Phiên làm việc</label>
+      <div style="display:flex;gap:8px;flex-wrap:wrap">
+        <button class="btn-secondary" id="btn-new-session" style="flex:1">🔄 Phiên mới</button>
+        <button class="btn-secondary" id="btn-export" style="flex:1">⬇ Tải bản ghi</button>
+      </div>
+      <button class="btn-secondary" id="btn-finish" style="width:100%;margin-top:8px">🏁 Kết thúc & tổng kết</button>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:4px 0 16px" />
+    <div class="setting-group">
+      <label class="setting-label">Provider AI</label>
+      <select class="setting-select" id="setting-provider">
+        <option value="ollama">Ollama (local)</option>
+        <option value="claude">Claude (-p)</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">Level phỏng vấn</label>
+      <select class="setting-select" id="setting-level">
+        <option value="junior">Junior</option>
+        <option value="mid" selected>Mid-level</option>
+        <option value="senior">Senior</option>
+        <option value="lead">Tech Lead</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">Ngôn ngữ</label>
+      <select class="setting-select" id="setting-lang">
+        <option value="vi">Tiếng Việt</option>
+        <option value="en">English</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">Chế độ TTS</label>
+      <select class="setting-select" id="setting-tts">
+        <option value="edge">Edge Neural (server)</option>
+        <option value="browser">Trình duyệt (nhanh)</option>
+        <option value="off">Tắt</option>
+      </select>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">Avatar giọng nói</label>
+      <div class="switch-row">
+        <input type="checkbox" id="setting-avatar-voice" checked />
+        <span class="setting-hint">Avatar đọc câu trả lời (TTS)</span>
+      </div>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">Avatar 3D</label>
+      <div class="switch-row">
+        <input type="checkbox" id="setting-avatar-3d" checked />
+        <span class="setting-hint">Hiển thị nhân vật 3D (Three.js)</span>
+      </div>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">Timer câu hỏi (giây)</label>
+      <input class="setting-input" type="number" id="setting-timer" value="120" min="0" max="600" />
+      <span class="setting-hint">0 = không giới hạn</span>
+    </div>
+    <hr style="border:none;border-top:1px solid var(--border);margin:16px 0" />
+    <div class="setting-group">
+      <label class="setting-label">📄 Tải lên CV của bạn</label>
+      <input type="file" id="cv-file" accept=".pdf,.md,.txt" style="display:none" />
+      <button class="btn-primary" id="btn-upload-cv" style="width:100%">
+        ⬆ Chọn & tải CV (PDF)
+      </button>
+      <div id="upload-status" style="font-size:11px;color:var(--text-3);margin-top:6px">
+        Agent sẽ đọc CV để hiểu bạn (chế độ Training)
+      </div>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">📚 Tải tài liệu kiến thức</label>
+      <input type="file" id="kb-file" accept=".pdf,.md,.txt" style="display:none" />
+      <button class="btn-secondary" id="btn-upload-kb" style="width:100%">
+        ⬆ Chọn & tải tài liệu
+      </button>
+      <div style="font-size:11px;color:var(--text-3);margin-top:6px">
+        Java, Spring, DevOps... để agent hỏi sát hơn
+      </div>
+    </div>
+    <div class="setting-group">
+      <label class="setting-label">Nạp lại Knowledge Base</label>
+      <button class="btn-secondary" id="btn-ingest" style="width:100%">
+        📚 Quét & nạp thư mục data/
+      </button>
+      <div id="ingest-status" style="font-size:11px;color:var(--text-3);margin-top:6px">
+        Quét data/knowledge/ và data/cv/
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ── SESSION HISTORY ────────────────────────────────────────── -->
+<div class="side-panel hidden" id="history-panel">
+  <div class="panel-header">
+    <h3>Lịch sử phiên</h3>
+    <button class="icon-btn" id="btn-close-history">✕</button>
+  </div>
+  <div class="panel-body" id="history-list">
+    <div class="empty-state"><p>Chưa có phiên nào.</p></div>
+  </div>
+</div>
+
+<!-- ── MIC RECORDING OVERLAY ──────────────────────────────────── -->
+<div class="recording-overlay hidden" id="recording-overlay">
+  <div class="recording-modal">
+    <div class="recording-pulse"></div>
+    <p id="recording-text">Đang nghe... nhả Space để gửi</p>
+    <div id="interim-text" style="font-size:13px;color:var(--text-2);margin-top:8px;min-height:20px"></div>
+  </div>
+</div>
+
+<!-- ── SESSION REPORT MODAL ───────────────────────────────────── -->
+<div class="modal-overlay hidden" id="report-overlay">
+  <div class="report-modal" id="report-modal">
+    <div class="report-head">
+      <h3>📋 Báo cáo phiên phỏng vấn</h3>
+      <button class="icon-btn" id="btn-close-report">✕</button>
+    </div>
+    <div class="report-body" id="report-body">
+      <div class="empty-state">Đang tạo báo cáo…</div>
+    </div>
+    <div class="report-foot">
+      <button class="btn-secondary" id="btn-report-export">⬇ Tải bản ghi</button>
+      <button class="btn-primary" id="btn-report-close">Đóng</button>
+    </div>
+  </div>
+</div>
+
+<!-- Toast notifications -->
+<div class="toast-wrap" id="toast-wrap"></div>
+
+<!-- Scripts -->
+<script src="avatar3d.js?v=7"></script>
+<script src="app.js?v=7"></script>
+</body>
+</html>

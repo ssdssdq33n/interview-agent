@@ -1,0 +1,356 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Dashboard — Interview Agent</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700&family=Inter:wght@400;500&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+  <link rel="stylesheet" href="style.css" />
+  <style>
+    body { overflow: auto; }
+    .dash-layout {
+      max-width: 1100px;
+      margin: 80px auto 40px;
+      padding: 0 24px;
+    }
+    .dash-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 32px;
+    }
+    .dash-header h1 {
+      font-family: var(--font-head);
+      font-size: 26px;
+      font-weight: 700;
+    }
+    .stat-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+      gap: 16px;
+      margin-bottom: 32px;
+    }
+    .stat-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .stat-label {
+      font-size: 12px;
+      font-weight: 500;
+      color: var(--text-2);
+      text-transform: uppercase;
+      letter-spacing: 0.05em;
+      margin-bottom: 8px;
+    }
+    .stat-value {
+      font-family: var(--font-head);
+      font-size: 32px;
+      font-weight: 700;
+      color: var(--primary);
+    }
+    .stat-sub { font-size: 12px; color: var(--text-3); margin-top: 4px; }
+    .charts-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+      margin-bottom: 32px;
+    }
+    @media (max-width: 700px) { .charts-grid { grid-template-columns: 1fr; } }
+    .chart-card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-lg);
+      padding: 20px;
+      box-shadow: var(--shadow-sm);
+    }
+    .chart-title {
+      font-family: var(--font-head);
+      font-size: 14px;
+      font-weight: 600;
+      margin-bottom: 16px;
+      color: var(--text);
+    }
+    .weak-area-list { display: flex; flex-direction: column; gap: 10px; }
+    .weak-area-row {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wa-topic { flex: 1; font-size: 13px; font-weight: 500; }
+    .wa-bar {
+      flex: 2;
+      height: 8px;
+      background: var(--surface2);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .wa-fill {
+      height: 100%;
+      border-radius: 4px;
+      background: var(--primary);
+      transition: width 0.8s ease;
+    }
+    .wa-fill.poor { background: var(--error); }
+    .wa-fill.avg  { background: var(--accent); }
+    .wa-fill.good { background: var(--success); }
+    .wa-score { font-size: 12px; font-weight: 600; color: var(--text-2); min-width: 30px; text-align: right; }
+    .session-table { width: 100%; border-collapse: collapse; }
+    .session-table th, .session-table td {
+      text-align: left;
+      padding: 10px 12px;
+      font-size: 13px;
+      border-bottom: 1px solid var(--border);
+    }
+    .session-table th { font-weight: 600; color: var(--text-2); background: var(--surface2); }
+    .badge {
+      display: inline-block;
+      padding: 2px 8px;
+      border-radius: 10px;
+      font-size: 11px;
+      font-weight: 500;
+    }
+    .badge-active   { background: var(--primary-l); color: var(--primary); }
+    .badge-done     { background: var(--success-l); color: var(--success); }
+    .empty { color: var(--text-3); text-align: center; padding: 24px; font-size: 14px; }
+    .loading { text-align: center; padding: 40px; color: var(--text-3); }
+  </style>
+</head>
+<body>
+<!-- Re-use header from main app -->
+<header class="header">
+  <div class="header-left">
+    <a href="/" class="logo">
+      <div class="logo-icon">AI</div>
+      <span class="logo-text">Interview Agent</span>
+    </a>
+  </div>
+  <div class="header-center">
+    <span style="font-family:var(--font-head);font-weight:600;font-size:15px">📊 Progress Dashboard</span>
+  </div>
+  <div class="header-right">
+    <a href="/" class="btn-secondary" style="font-size:13px;padding:6px 14px;text-decoration:none">
+      ← Quay lại
+    </a>
+  </div>
+</header>
+
+<div class="dash-layout">
+  <div id="loading" class="loading">Đang tải dữ liệu...</div>
+  <div id="content" class="hidden">
+
+    <!-- Stat cards -->
+    <div class="stat-grid">
+      <div class="stat-card">
+        <div class="stat-label">Tổng phiên</div>
+        <div class="stat-value" id="stat-sessions">0</div>
+        <div class="stat-sub">buổi phỏng vấn</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Tổng câu hỏi</div>
+        <div class="stat-value" id="stat-questions">0</div>
+        <div class="stat-sub">câu đã trả lời</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Điểm trung bình</div>
+        <div class="stat-value" id="stat-avg">—</div>
+        <div class="stat-sub">trên thang 10</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-label">Điểm yếu</div>
+        <div class="stat-value" id="stat-weak">0</div>
+        <div class="stat-sub">chủ đề cần luyện</div>
+      </div>
+    </div>
+
+    <!-- Due reviews (spaced repetition) -->
+    <div class="chart-card" id="due-card" style="margin-bottom:20px;border-left:3px solid var(--accent)">
+      <div class="chart-title">🔔 Cần ôn tập hôm nay (spaced repetition)</div>
+      <div class="weak-area-list" id="due-list">
+        <div class="empty">Không có chủ đề nào đến hạn — tốt lắm! 🎉</div>
+      </div>
+    </div>
+
+    <!-- Charts -->
+    <div class="charts-grid">
+      <div class="chart-card">
+        <div class="chart-title">📈 Điểm theo chủ đề</div>
+        <canvas id="chart-topics" height="200"></canvas>
+      </div>
+      <div class="chart-card">
+        <div class="chart-title">🎯 Điểm yếu cần luyện</div>
+        <div class="weak-area-list" id="weak-area-list">
+          <div class="empty">Chưa có dữ liệu</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Score trend -->
+    <div class="chart-card" id="trend-card" style="margin-bottom:20px">
+      <div class="chart-title">📉 Xu hướng điểm theo phiên</div>
+      <canvas id="chart-trend" height="90"></canvas>
+      <div id="trend-empty" class="empty hidden">Cần ít nhất 2 phiên có điểm để vẽ xu hướng.</div>
+    </div>
+
+    <!-- Sessions -->
+    <div class="chart-card">
+      <div class="chart-title">📋 Phiên gần đây</div>
+      <table class="session-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Chế độ</th>
+            <th>Level</th>
+            <th>Ngôn ngữ</th>
+            <th>Trạng thái</th>
+            <th>Điểm</th>
+            <th>Thời gian</th>
+          </tr>
+        </thead>
+        <tbody id="session-tbody">
+          <tr><td colspan="7" class="empty">Chưa có phiên</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+  </div><!-- /content -->
+</div>
+
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+
+  try {
+    const res = await fetch("/api/stats");
+    const data = await res.json();
+
+    $("loading").classList.add("hidden");
+    $("content").classList.remove("hidden");
+
+    // Stats
+    $("stat-sessions").textContent  = data.total_sessions || 0;
+    $("stat-questions").textContent = data.total_questions || 0;
+    $("stat-avg").textContent       = data.avg_score ? data.avg_score.toFixed(1) : "—";
+    const weakCount = (data.weak_areas || []).filter(w => w.avg_score < 7).length;
+    $("stat-weak").textContent = weakCount;
+
+    // Topic bar chart
+    const topics = data.topic_stats || [];
+    if (topics.length) {
+      const ctx = document.getElementById("chart-topics").getContext("2d");
+      new Chart(ctx, {
+        type: "bar",
+        data: {
+          labels: topics.map(t => t.topic),
+          datasets: [{
+            label: "Điểm TB",
+            data: topics.map(t => t.avg_score),
+            backgroundColor: topics.map(t =>
+              t.avg_score >= 8 ? "rgba(16,185,129,0.7)" :
+              t.avg_score >= 6 ? "rgba(37,99,235,0.7)" :
+                                 "rgba(239,68,68,0.7)"
+            ),
+            borderRadius: 6,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: {
+            y: { min: 0, max: 10, ticks: { stepSize: 2 } },
+            x: { ticks: { maxRotation: 30, font: { size: 11 } } },
+          },
+        },
+      });
+    }
+
+    // Due reviews (spaced repetition)
+    const dueList = $("due-list");
+    const due = data.due_reviews || [];
+    if (due.length) {
+      dueList.innerHTML = due.slice(0, 10).map(w => {
+        const pct = (w.avg_score / 10 * 100).toFixed(0);
+        const cls = w.avg_score < 5 ? "poor" : w.avg_score < 7 ? "avg" : "good";
+        return `<div class="weak-area-row">
+          <div class="wa-topic">📌 ${w.topic}</div>
+          <div class="wa-bar"><div class="wa-fill ${cls}" style="width:${pct}%"></div></div>
+          <div class="wa-score">${w.avg_score.toFixed(1)}</div>
+          <a href="/?mode=trainer" class="btn-primary" style="font-size:11px;padding:3px 10px;text-decoration:none;white-space:nowrap">Ôn ngay</a>
+        </div>`;
+      }).join("");
+    }
+
+    // Score trend (line chart)
+    const trend = data.score_trend || [];
+    if (trend.length >= 2) {
+      const ctx = document.getElementById("chart-trend").getContext("2d");
+      new Chart(ctx, {
+        type: "line",
+        data: {
+          labels: trend.map(p => p.date || p.session),
+          datasets: [{
+            label: "Điểm TB",
+            data: trend.map(p => p.avg_score),
+            borderColor: "#2563EB",
+            backgroundColor: "rgba(37,99,235,0.12)",
+            fill: true, tension: 0.35, pointRadius: 4, pointBackgroundColor: "#2563EB",
+            borderWidth: 2,
+          }],
+        },
+        options: {
+          responsive: true,
+          plugins: { legend: { display: false } },
+          scales: { y: { min: 0, max: 10, ticks: { stepSize: 2 } } },
+        },
+      });
+    } else {
+      document.getElementById("chart-trend").classList.add("hidden");
+      document.getElementById("trend-empty").classList.remove("hidden");
+    }
+
+    // Weak areas
+    const waList = $("weak-area-list");
+    const weak = data.weak_areas || [];
+    if (weak.length) {
+      waList.innerHTML = weak.slice(0, 8).map(w => {
+        const pct = (w.avg_score / 10 * 100).toFixed(0);
+        const cls = w.avg_score < 5 ? "poor" : w.avg_score < 7 ? "avg" : "good";
+        return `<div class="weak-area-row">
+          <div class="wa-topic">${w.topic}</div>
+          <div class="wa-bar"><div class="wa-fill ${cls}" style="width:${pct}%"></div></div>
+          <div class="wa-score">${w.avg_score.toFixed(1)}</div>
+        </div>`;
+      }).join("");
+    }
+
+    // Session table
+    const tbody = $("session-tbody");
+    const sessions = data.recent_sessions || [];
+    if (sessions.length) {
+      tbody.innerHTML = sessions.map(s => {
+        const badgeCls = s.status === "completed" ? "badge-done" : "badge-active";
+        const badgeTxt = s.status === "completed" ? "Xong" : "Đang";
+        const dt = new Date(s.created).toLocaleString("vi-VN");
+        return `<tr>
+          <td><code>${s.id.substring(0, 8)}…</code></td>
+          <td>${s.mode || "—"}</td>
+          <td>${s.level || "—"}</td>
+          <td>${s.language || "vi"}</td>
+          <td><span class="badge ${badgeCls}">${badgeTxt}</span></td>
+          <td>${s.overall_score ? s.overall_score.toFixed(1) : "—"}</td>
+          <td>${dt}</td>
+        </tr>`;
+      }).join("");
+    }
+
+  } catch (e) {
+    $("loading").textContent = "Không thể tải dữ liệu: " + e.message;
+  }
+})();
+</script>
+</body>
+</html>

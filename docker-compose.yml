@@ -1,0 +1,45 @@
+services:
+  # Vector database cho RAG (Phase 2)
+  pgvector:
+    image: pgvector/pgvector:pg16
+    container_name: interview-db
+    restart: unless-stopped
+    environment:
+      POSTGRES_USER: interview
+      POSTGRES_PASSWORD: interview
+      POSTGRES_DB: interview
+    ports:
+      - "5433:5432"              # 5433 để không đụng Ultron (5432)
+    volumes:
+      - interview_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U interview"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  # Docker sandbox để chạy code Java an toàn (Phase 6)
+  code-sandbox:
+    build:
+      context: ./docker/code-sandbox
+      dockerfile: Dockerfile
+    container_name: interview-sandbox
+    restart: unless-stopped
+    ports:
+      - "8081:8081"
+    environment:
+      - SANDBOX_MAX_TIME=10       # giây tối đa mỗi lần chạy code
+      - SANDBOX_MAX_MEMORY=256m
+    networks:
+      - sandbox-net
+    read_only: true
+    tmpfs:
+      - /tmp:size=64m,noexec
+
+volumes:
+  interview_pgdata:
+
+networks:
+  sandbox-net:
+    driver: bridge
+    internal: false

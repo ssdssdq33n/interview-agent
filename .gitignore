@@ -1,0 +1,30 @@
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+.venv/
+venv/
+env/
+
+# Node
+node_modules/
+dist/
+build/
+
+# Runtime data (sessions, memory, uploads)
+data/sessions/
+data/memory/
+data/cv/*
+!data/cv/.gitkeep
+
+# Logs & temp
+*.log
+*.tmp
+.DS_Store
+Thumbs.db
+
+# IDE / local
+.idea/
+.vscode/
+.env
+.env.local

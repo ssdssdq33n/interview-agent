@@ -1,0 +1,112 @@
+# Custom interview questions — Interview Agent
+# Format: list duoi key "questions". Agent se merge voi built-in bank.
+# Moi cau: topic, level (junior|mid|senior), language (vi|en), question,
+#          expected_keywords, model_answer (optional)
+
+questions:
+  # ── Java Core ────────────────────────────────────────────────
+  - topic: java-core
+    level: mid
+    language: vi
+    question: "String, StringBuilder va StringBuffer khac nhau the nao? Khi nao dung cai nao?"
+    expected_keywords: [immutable, thread-safe, synchronized, performance, StringBuilder, StringBuffer]
+    model_answer: |
+      String la immutable — moi lan noi chuoi tao object moi, ton bo nho khi lap nhieu.
+      StringBuilder mutable, KHONG thread-safe, nhanh nhat — dung trong 1 thread.
+      StringBuffer mutable, thread-safe (synchronized) nhung cham hon StringBuilder.
+      Quy tac: noi chuoi trong vong lap -> StringBuilder; can thread-safe -> StringBuffer.
+
+  - topic: java-core
+    level: senior
+    language: vi
+    question: "Giai thich garbage collection trong JVM. G1GC hoat dong the nao va khac gi so voi CMS?"
+    expected_keywords: [young generation, old generation, mark-sweep, G1, region, stop-the-world, CMS]
+    model_answer: |
+      Heap chia Young (Eden + 2 Survivor) va Old generation. Minor GC quet Young,
+      Major/Full GC quet Old. G1GC chia heap thanh cac region co kich thuoc bang nhau,
+      uu tien thu gom region co nhieu rac nhat (garbage-first), kiem soat duoc pause
+      time muc tieu. CMS da deprecated, chay concurrent nhung bi fragmentation va
+      khong nen heap; G1 nen (compact) duoc va du doan pause tot hon.
+
+  - topic: java-core
+    level: junior
+    language: vi
+    question: "== va .equals() khac nhau the nao khi so sanh object trong Java?"
+    expected_keywords: [reference, value, equals, hashCode, Object]
+    model_answer: |
+      == so sanh tham chieu (co cung dia chi bo nho khong). .equals() so sanh gia tri
+      logic, co the override. Khi override equals() phai override ca hashCode() de dam
+      bao hoat dong dung trong HashMap/HashSet.
+
+  # ── Spring Boot ──────────────────────────────────────────────
+  - topic: spring-boot
+    level: mid
+    language: vi
+    question: "Dependency Injection trong Spring co nhung kieu nao? Vi sao constructor injection duoc khuyen dung?"
+    expected_keywords: [constructor, setter, field, immutable, final, testability, circular dependency]
+    model_answer: |
+      Co 3 kieu: constructor, setter, field injection. Constructor injection duoc khuyen
+      dung vi: dam bao bean bat buoc co du dependency luc khoi tao, cho phep danh dau
+      field la final (immutable), de test (inject mock qua constructor), va phat hien
+      circular dependency som luc startup.
+
+  - topic: spring-boot
+    level: senior
+    language: vi
+    question: "Transaction trong Spring: @Transactional hoat dong the nao? Propagation REQUIRED vs REQUIRES_NEW khac gi?"
+    expected_keywords: [proxy, AOP, propagation, REQUIRED, REQUIRES_NEW, rollback, self-invocation]
+    model_answer: |
+      @Transactional dua tren AOP proxy — Spring boc method trong proxy de begin/commit/
+      rollback transaction. REQUIRED (mac dinh): tham gia transaction hien co hoac tao
+      moi neu chua co. REQUIRES_NEW: luon tao transaction moi, tam dung cai cu. Luu y:
+      self-invocation (goi method trong cung class) khong qua proxy nen @Transactional
+      khong co hieu luc.
+
+  # ── Microservices ────────────────────────────────────────────
+  - topic: microservices
+    level: senior
+    language: vi
+    question: "Lam the nao de dam bao data consistency giua cac microservice? Giai thich Outbox pattern."
+    expected_keywords: [eventual consistency, outbox, saga, dual write, CDC, idempotent]
+    model_answer: |
+      Tranh dual-write (ghi DB + gui message rieng -> de mat dong bo). Outbox pattern:
+      ghi event vao bang outbox trong CUNG transaction voi business data; mot process
+      (hoac CDC nhu Debezium) doc outbox va publish message -> dam bao atomic. Ket hop
+      Saga cho long-running transaction va idempotent consumer de xu ly duplicate.
+
+  # ── DevOps ───────────────────────────────────────────────────
+  - topic: devops
+    level: mid
+    language: vi
+    question: "Multi-stage build trong Docker la gi va tai sao nen dung cho ung dung Java?"
+    expected_keywords: [multi-stage, build, runtime, image size, layer, JDK, JRE]
+    model_answer: |
+      Multi-stage build dung nhieu FROM: stage dau (maven/JDK) de build jar, stage sau
+      (JRE nho) chi copy jar da build vao. Ket qua: image cuoi khong chua Maven, source,
+      JDK -> nho hon rat nhieu, it lo hong bao mat, va tan dung layer cache cho
+      dependency.
+
+  - topic: devops
+    level: senior
+    language: vi
+    question: "Kubernetes: giai thich liveness probe, readiness probe va startup probe. Dung sai gay hau qua gi?"
+    expected_keywords: [liveness, readiness, startup, restart, traffic, endpoint, health]
+    model_answer: |
+      Liveness: pod con song khong — fail thi kubelet restart container. Readiness: pod
+      san sang nhan traffic chua — fail thi bi loai khoi Service endpoints (khong restart).
+      Startup: cho app khoi dong cham, tam hoan liveness/readiness. Dung sai: liveness
+      qua nhay -> restart lien tuc (crash loop); thieu readiness -> traffic vao pod chua
+      san sang gay loi.
+
+  # ── System Design ────────────────────────────────────────────
+  - topic: system-design
+    level: senior
+    language: vi
+    question: "Thiet ke he thong notification (push, email, SMS) cho 10 trieu user. Can luu y gi?"
+    expected_keywords: [queue, fan-out, rate limit, retry, template, idempotent, priority, dead letter]
+    model_answer: |
+      Dung message queue (Kafka) de decouple. Service nhan request -> day vao queue theo
+      kenh (push/email/SMS). Worker tieu thu, goi provider tuong ung, co retry + dead
+      letter queue cho message loi. Can: rate limiting theo provider, template service,
+      idempotency key tranh gui trung, priority queue cho message khan, va tracking
+      trang thai gui.
